@@ -1,2 +1,3 @@
-# s1
-only implementing a little bit of s3
+# S1
+
+Implementing only a little bit of S3
