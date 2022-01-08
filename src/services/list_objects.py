@@ -4,11 +4,30 @@ ListObjects
 https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListObjects.html
 
 """
-
+import os
 from fastapi import Response, Request
+from google.cloud import storage
+from google.auth.credentials import AnonymousCredentials
+
+
+def get_blobs_at_path(bucket, path):
+
+    # this means we're testing
+    if os.environ.get("STORAGE_EMULATOR_HOST") is not None:
+        client = storage.Client(
+            credentials=AnonymousCredentials(),
+            project="PROJECT",
+        )
+    else:  # pragma: no cover
+        client = storage.Client(project="PROJECT")
+
+    gcs_bucket = client.get_bucket(bucket)
+    return list(client.list_blobs(bucket_or_name=gcs_bucket, prefix=path))
+
 
 
 def ListObjects(bucket: str, request: Request):
+
 
     return Response(
         """<?xml version="1.0" encoding="UTF-8"?>
