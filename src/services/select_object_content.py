@@ -110,7 +110,7 @@ def SelectObjectContent(bucket: str, object: str, body: bytes):
     # For S3 Select, the request body is XML containing:
     # - Expression (SQL query)
     # - ExpressionType (SQL)
-    # - InputSerialization (CSV, JSON, or Parquet format details)
+    # - InputSerialization (Parquet format only - CSV and JSON not supported)
     # - OutputSerialization (CSV or JSON format details)
     
     # Parse XML request body
@@ -122,9 +122,18 @@ def SelectObjectContent(bucket: str, object: str, body: bytes):
         expression = expression_elem.text if expression_elem is not None else "SELECT * FROM S3Object"
         
         # Extract input serialization format - only Parquet is supported for SQL API
-        parquet_elem = root.find('.//{http://s3.amazonaws.com/doc/2006-03-01/}Parquet')
-        csv_elem = root.find('.//{http://s3.amazonaws.com/doc/2006-03-01/}CSV')
-        json_elem = root.find('.//{http://s3.amazonaws.com/doc/2006-03-01/}JSON')
+        input_serialization = root.find('.//{http://s3.amazonaws.com/doc/2006-03-01/}InputSerialization')
+        
+        if input_serialization is None:
+            return Response(
+                content="SQL API only supports Parquet files. InputSerialization element is required.",
+                status_code=400,
+                media_type="text/plain"
+            )
+        
+        parquet_elem = input_serialization.find('.//{http://s3.amazonaws.com/doc/2006-03-01/}Parquet')
+        csv_elem = input_serialization.find('.//{http://s3.amazonaws.com/doc/2006-03-01/}CSV')
+        json_elem = input_serialization.find('.//{http://s3.amazonaws.com/doc/2006-03-01/}JSON')
         
         if parquet_elem is not None:
             input_format = 'Parquet'
