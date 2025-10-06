@@ -16,8 +16,6 @@ from fastapi import Response
 def GetBucketLocation():
     return Response(
         content="""<?xml version="1.0" encoding="UTF-8"?>
-<LocationConstraint>
-   <LocationConstraint>eu-west-2</LocationConstraint>
-</LocationConstraint>""",
+<LocationConstraint xmlns="http://s3.amazonaws.com/doc/2006-03-01/">eu-west-2</LocationConstraint>""",
         media_type="application/xml",
     )

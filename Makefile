@@ -27,6 +27,7 @@ clean:
 	rm -rf $(VENV)
 
 lint:
+	python -m pip install --quiet --upgrade uv
 	python -m uv pip install --quiet --upgrade pycln isort ruff
 	python -m ruff check --fix --exit-zero
 	python -m pycln .

@@ -5,6 +5,7 @@ Supports both Google Cloud Storage (GCS) and local filesystem as backends.
 """
 
 import os
+from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 from typing import List, Optional
@@ -116,7 +117,8 @@ class LocalFilesystemBackend(StorageBackend):
                         BlobInfo(
                             name=str(relative_path),
                             size=stat.st_size,
-                            updated=str(stat.st_mtime),
+                            updated=datetime.fromtimestamp(stat.st_mtime).isoformat()
+                            + "Z",
                             etag=f'"{hash(str(relative_path))}"',
                         )
                     )
@@ -131,11 +133,15 @@ class LocalFilesystemBackend(StorageBackend):
                             BlobInfo(
                                 name=relative_path,
                                 size=stat.st_size,
-                                updated=str(stat.st_mtime),
+                                updated=datetime.fromtimestamp(
+                                    stat.st_mtime
+                                ).isoformat()
+                                + "Z",
                                 etag=f'"{hash(relative_path)}"',
                             )
                         )
 
+        blobs.sort(key=lambda blob: blob.name)
         return blobs
 
 
