@@ -1,3 +1,93 @@
 # S1
 
 Implementing only a little bit of S3
+
+## Overview
+
+S1 is a lightweight S3-compatible API implementation that provides core S3 services for reading data from Google Cloud Storage (GCS). It implements the following S3 APIs:
+
+### Implemented Features
+
+1. **GetBucketLocation** - Returns the region where the bucket resides
+2. **ListObjects** - Lists objects in a bucket with support for filtering
+3. **GetObject** - Retrieves objects from a bucket
+4. **SelectObjectContent (S3 Select)** - Enables SQL queries on S3 objects for data filtering and transformation
+
+## API Endpoints
+
+### 1. GetBucketLocation
+```
+GET /{bucket}?location
+```
+Returns the AWS region for the bucket (always returns `eu-west-2`).
+
+### 2. ListObjects
+```
+GET /{bucket}?delimiter={delimiter}&prefix={prefix}&max-keys={max-keys}&marker={marker}
+```
+Lists objects in a bucket. Supports query parameters:
+- `prefix` - Limits response to keys that begin with the specified prefix
+- `delimiter` - Character used to group keys
+- `max-keys` - Maximum number of keys to return (default: 1000)
+- `marker` - Key to start with when listing objects
+
+### 3. GetObject
+```
+GET /{bucket}/{object}
+```
+Retrieves an object from the bucket.
+
+### 4. SelectObjectContent (S3 Select)
+```
+POST /{bucket}/{object}?select&select-type=2
+```
+Performs SQL queries on objects stored in S3. The request body should contain XML with:
+- SQL expression
+- Input serialization format (CSV or JSON)
+- Output serialization format (CSV or JSON)
+
+#### Example Request Body:
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<SelectObjectContentRequest xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+    <Expression>SELECT * FROM S3Object WHERE price > 100</Expression>
+    <ExpressionType>SQL</ExpressionType>
+    <InputSerialization>
+        <CSV>
+            <FileHeaderInfo>USE</FileHeaderInfo>
+        </CSV>
+    </InputSerialization>
+    <OutputSerialization>
+        <JSON/>
+    </OutputSerialization>
+</SelectObjectContentRequest>
+```
+
+## Supported S3 Select Features
+
+- **Input Formats**: CSV, JSON
+- **Output Formats**: CSV, JSON
+- **SQL Operations**: 
+  - SELECT with column specification or wildcard (*)
+  - Basic WHERE clause filtering
+  - Queries against S3Object alias
+
+## Architecture
+
+The implementation uses:
+- **FastAPI** for the web framework
+- **Google Cloud Storage** as the backend storage
+- **XML parsing** for S3 Select request handling
+- **CSV/JSON processing** for data filtering
+
+## Running the Service
+
+```bash
+python src/main.py
+```
+
+The service will start on port 8080 (or the port specified in the `PORT` environment variable).
+
+## Storage Backend
+
+S1 uses Google Cloud Storage (GCS) as its storage backend. When `STORAGE_EMULATOR_HOST` environment variable is set, it connects to a storage emulator for testing purposes.

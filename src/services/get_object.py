@@ -28,6 +28,13 @@ def get_blob(project: str, bucket: str, blob_name: str):
 def GetObject(bucket: str, object: str, request: Request):
 
     blob = get_blob("PROJECT", bucket=bucket, blob_name=object)
+    
+    if blob is None:
+        return Response(
+            content="Object not found",
+            status_code=404,
+            media_type="text/plain"
+        )
 
     return Response(
         blob.download_as_bytes(),
