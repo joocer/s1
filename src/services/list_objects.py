@@ -27,38 +27,36 @@ def get_blobs_at_path(bucket, path):
 
 
 def ListObjects(bucket: str, request: Request):
-
-
+    # Get query parameters
+    prefix = request.query_params.get("prefix", "")
+    delimiter = request.query_params.get("delimiter", "")
+    max_keys = int(request.query_params.get("max-keys", "1000"))
+    marker = request.query_params.get("marker", "")
+    
+    # Get blobs from GCS
+    blobs = get_blobs_at_path(bucket, prefix)
+    
+    # Build XML response
+    xml_parts = ['<?xml version="1.0" encoding="UTF-8"?>']
+    xml_parts.append('<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">')
+    xml_parts.append(f'    <Name>{bucket}</Name>')
+    xml_parts.append(f'    <Prefix>{prefix}</Prefix>')
+    xml_parts.append(f'    <Marker>{marker}</Marker>')
+    xml_parts.append(f'    <MaxKeys>{max_keys}</MaxKeys>')
+    xml_parts.append('    <IsTruncated>false</IsTruncated>')
+    
+    for blob in blobs[:max_keys]:
+        xml_parts.append('    <Contents>')
+        xml_parts.append(f'        <Key>{blob.name}</Key>')
+        xml_parts.append(f'        <LastModified>{blob.updated.isoformat()}</LastModified>')
+        xml_parts.append(f'        <ETag>"{blob.etag}"</ETag>')
+        xml_parts.append(f'        <Size>{blob.size}</Size>')
+        xml_parts.append('        <StorageClass>STANDARD</StorageClass>')
+        xml_parts.append('    </Contents>')
+    
+    xml_parts.append('</ListBucketResult>')
+    
     return Response(
-        """<?xml version="1.0" encoding="UTF-8"?>
-<ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
-    <Name>bucket</Name>
-    <Prefix/>
-    <Marker/>
-    <MaxKeys>1000</MaxKeys>
-    <IsTruncated>false</IsTruncated>
-    <Contents>
-        <Key>my-image.jpg</Key>
-        <LastModified>2009-10-12T17:50:30.000Z</LastModified>
-        <ETag>"fba9dede5f27731c9771645a39863328"</ETag>
-        <Size>434234</Size>
-        <StorageClass>STANDARD</StorageClass>
-        <Owner>
-            <ID>75aa57f09aa0c8caeab4f8c24e99d10f8e7faeebf76c078efc7c6caea54ba06a</ID>
-            <DisplayName>mtd@amazon.com</DisplayName>
-        </Owner>
-    </Contents>
-    <Contents>
-       <Key>my-third-image.jpg</Key>
-         <LastModified>2009-10-12T17:50:30.000Z</LastModified>
-         <ETag>"1b2cf535f27731c974343645a3985328"</ETag>
-         <Size>64994</Size>
-         <StorageClass>STANDARD_IA</StorageClass>
-         <Owner>
-            <ID>75aa57f09aa0c8caeab4f8c24e99d10f8e7faeebf76c078efc7c6caea54ba06a</ID>
-            <DisplayName>mtd@amazon.com</DisplayName>
-        </Owner>
-    </Contents>
-</ListBucketResult>""".encode(),
+        '\n'.join(xml_parts).encode(),
         media_type="application/xml",
     )
