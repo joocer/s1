@@ -76,7 +76,8 @@ Performs SQL queries on objects stored in S3. The request body should contain XM
 
 The implementation uses:
 - **FastAPI** for the web framework
-- **Google Cloud Storage** as the backend storage
+- **Storage abstraction layer** supporting both Google Cloud Storage and local filesystem
+- **LRU caching** for improved read performance using Python's `functools.lru_cache`
 - **XML parsing** for S3 Select request handling
 - **CSV/JSON processing** for data filtering
 
@@ -90,4 +91,26 @@ The service will start on port 8080 (or the port specified in the `PORT` environ
 
 ## Storage Backend
 
-S1 uses Google Cloud Storage (GCS) as its storage backend. When `STORAGE_EMULATOR_HOST` environment variable is set, it connects to a storage emulator for testing purposes.
+S1 supports two storage backends:
+
+### Google Cloud Storage (GCS)
+The default backend uses Google Cloud Storage (GCS). When `STORAGE_EMULATOR_HOST` environment variable is set, it connects to a storage emulator for testing purposes.
+
+### Local Filesystem
+S1 can also use the local filesystem as a storage backend, which is useful for testing or development environments.
+
+### Configuration
+
+The storage backend is configured using environment variables:
+
+- **`STORAGE_BACKEND`** - Set to `gcs` (default) or `local` to choose the backend
+- **`STORAGE_CACHE_SIZE`** - LRU cache size for blob content (default: 128)
+- **`LOCAL_STORAGE_PATH`** - Base path for local filesystem storage (default: `/data`)
+- **`GCS_PROJECT`** - GCS project name (default: `PROJECT`)
+- **`STORAGE_EMULATOR_HOST`** - GCS emulator host for testing
+
+### LRU Caching
+
+S1 implements LRU (Least Recently Used) caching for blob content reads. This significantly improves performance when the same objects are accessed multiple times. The cache size can be configured using the `STORAGE_CACHE_SIZE` environment variable.
+
+The caching layer operates transparently for both GCS and local filesystem backends, making S1 an effective caching layer for systems like Opteryx.

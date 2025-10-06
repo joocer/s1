@@ -4,26 +4,8 @@ ListObjects
 https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListObjects.html
 
 """
-import os
 from fastapi import Response, Request
-from google.cloud import storage
-from google.auth.credentials import AnonymousCredentials
-
-
-def get_blobs_at_path(bucket, path):
-
-    # this means we're testing
-    if os.environ.get("STORAGE_EMULATOR_HOST") is not None:
-        client = storage.Client(
-            credentials=AnonymousCredentials(),
-            project="PROJECT",
-        )
-    else:  # pragma: no cover
-        client = storage.Client(project="PROJECT")
-
-    gcs_bucket = client.get_bucket(bucket)
-    return list(client.list_blobs(bucket_or_name=gcs_bucket, prefix=path))
-
+from .storage import list_blobs
 
 
 def ListObjects(bucket: str, request: Request):
@@ -33,8 +15,8 @@ def ListObjects(bucket: str, request: Request):
     max_keys = int(request.query_params.get("max-keys", "1000"))
     marker = request.query_params.get("marker", "")
     
-    # Get blobs from GCS
-    blobs = get_blobs_at_path(bucket, prefix)
+    # Get blobs from storage backend
+    blobs = list_blobs(bucket, prefix)
     
     # Build XML response
     xml_parts = ['<?xml version="1.0" encoding="UTF-8"?>']
@@ -48,8 +30,8 @@ def ListObjects(bucket: str, request: Request):
     for blob in blobs[:max_keys]:
         xml_parts.append('    <Contents>')
         xml_parts.append(f'        <Key>{blob.name}</Key>')
-        xml_parts.append(f'        <LastModified>{blob.updated.isoformat()}</LastModified>')
-        xml_parts.append(f'        <ETag>"{blob.etag}"</ETag>')
+        xml_parts.append(f'        <LastModified>{blob.updated}</LastModified>')
+        xml_parts.append(f'        <ETag>{blob.etag}</ETag>')
         xml_parts.append(f'        <Size>{blob.size}</Size>')
         xml_parts.append('        <StorageClass>STANDARD</StorageClass>')
         xml_parts.append('    </Contents>')

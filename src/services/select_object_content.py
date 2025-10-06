@@ -6,29 +6,13 @@ https://docs.aws.amazon.com/AmazonS3/latest/API/API_SelectObjectContent.html
 This service enables applications to filter the contents of an Amazon S3 object 
 using simple SQL expressions.
 """
-import os
 import io
 import json
 import csv
 from fastapi import Response, Request
-from google.cloud import storage
-from google.auth.credentials import AnonymousCredentials
 from xml.etree import ElementTree as ET
+from .storage import get_blob_content
 
-
-def get_blob(project: str, bucket: str, blob_name: str):
-    # this means we're testing
-    if os.environ.get("STORAGE_EMULATOR_HOST") is not None:
-        client = storage.Client(
-            credentials=AnonymousCredentials(),
-            project=project,
-        )
-    else:  # pragma: no cover
-        client = storage.Client(project=project)
-
-    gcs_bucket = client.get_bucket(bucket)
-    blob = gcs_bucket.get_blob(blob_name)
-    return blob
 
 
 def parse_sql_expression(sql: str):
@@ -156,18 +140,15 @@ def SelectObjectContent(bucket: str, object: str, body: bytes):
             media_type="text/plain"
         )
     
-    # Get the object from GCS
-    blob = get_blob("PROJECT", bucket=bucket, blob_name=object)
+    # Get the object from storage
+    content = get_blob_content(bucket=bucket, blob_name=object)
     
-    if blob is None:
+    if content is None:
         return Response(
             content="Object not found",
             status_code=404,
             media_type="text/plain"
         )
-    
-    # Download object content
-    content = blob.download_as_bytes()
     
     # Apply SQL based on input format
     try:
