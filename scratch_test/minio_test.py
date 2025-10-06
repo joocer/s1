@@ -1,6 +1,5 @@
 from minio import Minio  # type:ignore
 
-
 m = Minio("localhost:8080", "access_key", "secret_key", secure=False)
 print(
     list(
