@@ -121,13 +121,27 @@ def SelectObjectContent(bucket: str, object: str, body: bytes):
         expression_elem = root.find('.//{http://s3.amazonaws.com/doc/2006-03-01/}Expression')
         expression = expression_elem.text if expression_elem is not None else "SELECT * FROM S3Object"
         
-        # Extract input serialization format
-        input_format_elem = root.find('.//{http://s3.amazonaws.com/doc/2006-03-01/}CSV')
-        if input_format_elem is not None:
-            input_format = 'CSV'
+        # Extract input serialization format - only Parquet is supported for SQL API
+        parquet_elem = root.find('.//{http://s3.amazonaws.com/doc/2006-03-01/}Parquet')
+        csv_elem = root.find('.//{http://s3.amazonaws.com/doc/2006-03-01/}CSV')
+        json_elem = root.find('.//{http://s3.amazonaws.com/doc/2006-03-01/}JSON')
+        
+        if parquet_elem is not None:
+            input_format = 'Parquet'
+        elif csv_elem is not None or json_elem is not None:
+            # CSV and JSON are not supported for SQL API
+            format_name = 'CSV' if csv_elem is not None else 'JSON'
+            return Response(
+                content=f"SQL API only supports Parquet files. {format_name} format is not supported. Use blob access (GetObject) for other file types.",
+                status_code=400,
+                media_type="text/plain"
+            )
         else:
-            json_elem = root.find('.//{http://s3.amazonaws.com/doc/2006-03-01/}JSON')
-            input_format = 'JSON' if json_elem is not None else 'CSV'
+            return Response(
+                content="SQL API only supports Parquet files. Please specify Parquet in InputSerialization.",
+                status_code=400,
+                media_type="text/plain"
+            )
         
         # Extract output serialization format
         output_csv = root.find('.//{http://s3.amazonaws.com/doc/2006-03-01/}OutputSerialization/{http://s3.amazonaws.com/doc/2006-03-01/}CSV')
@@ -152,34 +166,20 @@ def SelectObjectContent(bucket: str, object: str, body: bytes):
     
     # Apply SQL based on input format
     try:
-        if input_format == 'CSV':
-            results = apply_sql_to_csv(content, expression)
-        elif input_format == 'JSON':
-            results = apply_sql_to_json(content, expression)
+        if input_format == 'Parquet':
+            # Parquet SQL processing would be implemented here
+            # For now, return an error indicating Parquet SQL is not yet implemented
+            return Response(
+                content="Parquet SQL processing is not yet implemented",
+                status_code=501,
+                media_type="text/plain"
+            )
         else:
             return Response(
-                content=f"Unsupported input format: {input_format}",
+                content=f"Unsupported input format: {input_format}. SQL API only supports Parquet files.",
                 status_code=400,
                 media_type="text/plain"
             )
-        
-        # Format output
-        if output_format == 'CSV':
-            output = io.StringIO()
-            if results:
-                writer = csv.DictWriter(output, fieldnames=results[0].keys())
-                writer.writeheader()
-                writer.writerows(results)
-            response_content = output.getvalue().encode()
-            media_type = "text/csv"
-        else:  # JSON
-            response_content = json.dumps(results).encode()
-            media_type = "application/json"
-        
-        return Response(
-            content=response_content,
-            media_type=media_type
-        )
         
     except Exception as e:
         return Response(

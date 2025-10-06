@@ -43,8 +43,10 @@ POST /{bucket}/{object}?select&select-type=2
 ```
 Performs SQL queries on objects stored in S3. The request body should contain XML with:
 - SQL expression
-- Input serialization format (CSV or JSON)
+- Input serialization format (Parquet only)
 - Output serialization format (CSV or JSON)
+
+**Note**: The SQL API only supports Parquet files. For accessing other file types (CSV, JSON, etc.), use the GetObject endpoint.
 
 #### Example Request Body:
 ```xml
@@ -53,9 +55,7 @@ Performs SQL queries on objects stored in S3. The request body should contain XM
     <Expression>SELECT * FROM S3Object WHERE price > 100</Expression>
     <ExpressionType>SQL</ExpressionType>
     <InputSerialization>
-        <CSV>
-            <FileHeaderInfo>USE</FileHeaderInfo>
-        </CSV>
+        <Parquet/>
     </InputSerialization>
     <OutputSerialization>
         <JSON/>
@@ -65,12 +65,14 @@ Performs SQL queries on objects stored in S3. The request body should contain XM
 
 ## Supported S3 Select Features
 
-- **Input Formats**: CSV, JSON
+- **Input Formats**: Parquet only
 - **Output Formats**: CSV, JSON
 - **SQL Operations**: 
   - SELECT with column specification or wildcard (*)
   - Basic WHERE clause filtering
   - Queries against S3Object alias
+
+**Important**: The SQL API (SelectObjectContent) only supports Parquet files. For other file formats like CSV or JSON, use the GetObject API for blob access.
 
 ## Architecture
 
@@ -79,7 +81,7 @@ The implementation uses:
 - **Storage abstraction layer** supporting both Google Cloud Storage and local filesystem
 - **LRU caching** for improved read performance using Python's `functools.lru_cache`
 - **XML parsing** for S3 Select request handling
-- **CSV/JSON processing** for data filtering
+- **Parquet support** for SQL queries (other formats available via GetObject)
 
 ## Running the Service
 
